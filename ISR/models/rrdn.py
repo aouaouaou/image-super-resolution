@@ -1,6 +1,7 @@
 import tensorflow as tf
 from keras.initializers import RandomUniform
 from keras.layers import UpSampling2D, concatenate, Input, Activation, Add, Conv2D, Lambda
+from keras.layers.convolutional import AtrousConvolution2D
 from keras.models import Model
 from ISR.models.imagemodel import ImageModel
 
@@ -73,7 +74,7 @@ class RRDN(ImageModel):
 
         x = input_layer
         for c in range(1, self.C + 1):
-            F_dc = Conv2D(
+            F_dc = AtrousConvolution2D(
                 self.G,
                 kernel_size=self.kernel_size,
                 padding='same',
@@ -84,7 +85,7 @@ class RRDN(ImageModel):
             x = concatenate([x, F_dc], axis=3, name='RDB_Concat_%d_%d_%d' % (t, d, c))
 
         # DIFFERENCE: in RDN a kernel size of 1 instead of 3 is used here
-        x = Conv2D(
+        x = AtrousConvolution2D(
             self.G0,
             kernel_size=3,
             padding='same',
@@ -114,7 +115,7 @@ class RRDN(ImageModel):
     def _pixel_shuffle(self, input_layer):
         """ PixelShuffle implementation of the upscaling part. """
 
-        x = Conv2D(
+        x = AtrousConvolution2D(
             self.c_dim * self.scale ** 2,
             kernel_size=3,
             padding='same',
@@ -128,7 +129,7 @@ class RRDN(ImageModel):
 
     def _build_rdn(self):
         LR_input = Input(shape=(self.patch_size, self.patch_size, 3), name='LR_input')
-        pre_blocks = Conv2D(
+        pre_blocks = AtrousConvolution2D(
             self.G0,
             kernel_size=self.kernel_size,
             padding='same',
@@ -142,7 +143,7 @@ class RRDN(ImageModel):
             else:
                 x = self._RRDB(x, t)
         # DIFFERENCE: in RDN a conv with kernel size of 1 after a concat operation is used here
-        post_blocks = Conv2D(
+        post_blocks = AtrousConvolution2D(
             self.G0,
             kernel_size=3,
             padding='same',
@@ -154,7 +155,7 @@ class RRDN(ImageModel):
         # Upscaling
         PS = self._pixel_shuffle(GRL)
         # Compose SR image
-        SR = Conv2D(
+        SR = AtrousConvolution2D(
             self.c_dim,
             kernel_size=self.kernel_size,
             padding='same',
